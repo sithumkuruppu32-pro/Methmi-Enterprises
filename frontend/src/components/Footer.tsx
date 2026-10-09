@@ -1,11 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { Phone, Mail, MapPin, Plane } from "lucide-react";
 import { siteConfig } from "@/lib/site-config";
 import { trackEvent } from "@/lib/analytics";
 
 export default function Footer() {
+  const pathname = usePathname();
+  const prefetch = pathname.startsWith("/admin") ? false : undefined;
   const year = new Date().getFullYear();
 
   return (
@@ -14,10 +18,12 @@ export default function Footer() {
         <div>
           <div className="flex items-center gap-2 font-display text-lg font-bold text-white">
             <span className="relative flex h-10 w-10 shrink-0 items-center justify-center sm:h-12 sm:w-12">
-              <img
+              <Image
                 src="/images/brand/logo.jpeg"
                 alt={`${siteConfig.businessName} logo`}
-                className="h-full w-full object-contain"
+                fill
+                sizes="48px"
+                className="object-contain"
               />
             </span>
             {siteConfig.businessName}
@@ -33,10 +39,42 @@ export default function Footer() {
             Explore
           </h3>
           <ul className="space-y-2 text-sm text-sand-200">
-            <li><Link href="/fleet" className="hover:text-white">Fleet</Link></li>
-            <li><Link href="/tours" className="hover:text-white">Tours</Link></li>
-            <li><Link href="/about" className="hover:text-white">About Us</Link></li>
-            <li><Link href="/booking-enquiry" className="hover:text-white">Booking Enquiry</Link></li>
+            <li>
+              <Link
+                prefetch={prefetch}
+                href="/fleet"
+                className="hover:text-white"
+              >
+                Fleet
+              </Link>
+            </li>
+            <li>
+              <Link
+                prefetch={prefetch}
+                href="/tours"
+                className="hover:text-white"
+              >
+                Tours
+              </Link>
+            </li>
+            <li>
+              <Link
+                prefetch={prefetch}
+                href="/about"
+                className="hover:text-white"
+              >
+                About Us
+              </Link>
+            </li>
+            <li>
+              <Link
+                prefetch={prefetch}
+                href="/booking-enquiry"
+                className="hover:text-white"
+              >
+                Booking Enquiry
+              </Link>
+            </li>
           </ul>
         </div>
 
@@ -87,7 +125,9 @@ export default function Footer() {
 
       <div className="border-t border-white/10">
         <div className="container-page flex flex-col items-center justify-between gap-2 py-5 text-xs text-sand-200 sm:flex-row">
-          <p>© {year} {siteConfig.businessName}. All rights reserved.</p>
+          <p>
+            © {year} {siteConfig.businessName}. All rights reserved.
+          </p>
           <p>Katunayaka, Sri Lanka</p>
         </div>
       </div>
