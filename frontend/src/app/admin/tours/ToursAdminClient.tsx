@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { revalidateAfterTourChange } from "./actions";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Plus, Pencil, Trash2, X, AlertTriangle, Loader2 } from "lucide-react";
@@ -46,15 +47,31 @@ function tourToForm(tour: Tour): FormState {
 export default function ToursAdminClient({ initialTours }: { initialTours: Tour[] }) {
   const router = useRouter();
   const [tours, setTours] = useState<Tour[]>(initialTours);
+  useEffect(() => {
+  setTours(initialTours);
+}, [initialTours]);
   const [editingSlug, setEditingSlug] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [deleteError, setDeleteError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Tour | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [syncNotice, setSyncNotice] = useState("");
 
+async function refreshAfterWrite() {
+  try {
+    await revalidateAfterTourChange();
+
+    setSyncNotice("");
+  } catch {
+    setSyncNotice(
+      "The change was saved, but the page cache could not be refreshed."
+    );
+  }
+
+  router.refresh();
+}
   function openAdd() {
     setForm(emptyForm);
     setEditingSlug(null);
@@ -113,9 +130,10 @@ export default function ToursAdminClient({ initialTours }: { initialTours: Tour[
         return [...prev, saved];
       });
 
-      setShowForm(false);
-      setSaving(false);
-      router.refresh();
+setShowForm(false);
+setSaving(false);
+
+await refreshAfterWrite();
     } catch {
       setError("Something went wrong. Please try again.");
       setSaving(false);
@@ -123,29 +141,54 @@ export default function ToursAdminClient({ initialTours }: { initialTours: Tour[
   }
 
   async function handleDelete() {
-    if (!deleteTarget) return;
-    setDeleting(true);
-    setDeleteError("");
-    try {
-      const response = await fetch(`/api/admin/tours/${deleteTarget.slug}`, { method: "DELETE" });
-      if (!response.ok) {
-        const result = await response.json();
-        throw new Error(result.error || "Could not delete the record.");
-      }
-      setTours((prev) => prev.filter((t) => t.slug !== deleteTarget.slug));
-      setDeleteTarget(null);
-      router.refresh();
-    } catch (error) {
-      setDeleteError(error instanceof Error ? error.message : "Could not delete the record.");
-    } finally {
-      setDeleting(false);
-    }
-  }
+  if (!deleteTarget) return;
 
+  setDeleting(true);
+  setSyncNotice("");
+
+  try {
+    const res = await fetch(
+      `/api/admin/tours/${deleteTarget.slug}`,
+      {
+        method: "DELETE",
+      }
+    );
+
+    if (!res.ok) {
+      setSyncNotice(
+        "Failed to delete tour. Please try again."
+      );
+      return;
+    }
+
+    setTours((prev) =>
+      prev.filter((t) => t.slug !== deleteTarget.slug)
+    );
+
+    setDeleteTarget(null);
+
+    await refreshAfterWrite();
+
+  } catch {
+    setSyncNotice(
+      "Something went wrong while deleting the tour."
+    );
+  } finally {
+    setDeleting(false);
+  }
+}
   const uploadSlug = editingSlug || slugify(form.name || "tour");
 
   return (
     <div>
+      {syncNotice && (
+  <p
+    role="status"
+    className="mt-4 rounded-lg bg-yellow-50 p-4 text-sm text-yellow-800"
+  >
+    {syncNotice}
+  </p>
+)}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-bold text-ink-900">Tours</h1>
@@ -163,16 +206,20 @@ export default function ToursAdminClient({ initialTours }: { initialTours: Tour[
       </div>
 
       <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {tours.map((tour) => (
+        {tours.map((tour, index) => (
           <div key={tour.slug} className="overflow-hidden rounded-xl2 bg-white shadow-soft">
             <div className="relative h-36 bg-sand-100">
               {tour.image && (
-                /^https?:\/\//i.test(tour.image) ? (
-                  <Image src={tour.image} alt={tour.name} fill className="object-cover" unoptimized />
-                ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={tour.image} alt={tour.name} className="h-full w-full object-cover" />
-                )
+                <Image
+                  src={tour.image}
+                  alt={tour.name}
+                  fill
+                  sizes="(min-width: 1280px) 400px, (min-width: 1024px) calc(33.333vw - 27px), (min-width: 640px) calc(50vw - 30px), calc(100vw - 40px)"
+                  quality={75}
+                  loading={index === 0 ? "eager" : "lazy"}
+                  fetchPriority={index === 0 ? "high" : "auto"}
+                  className="object-cover"
+                />
               )}
             </div>
             <div className="p-4">
@@ -195,7 +242,7 @@ export default function ToursAdminClient({ initialTours }: { initialTours: Tour[
                   Edit
                 </button>
                 <button
-                  onClick={() => { setDeleteError(""); setDeleteTarget(tour); }}
+                  onClick={() => setDeleteTarget(tour)}
                   className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border border-red-200 py-2 text-xs font-semibold text-red-700 transition-colors hover:bg-red-50"
                 >
                   <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
@@ -340,9 +387,8 @@ export default function ToursAdminClient({ initialTours }: { initialTours: Tour[
           <div className="w-full max-w-sm rounded-xl2 bg-white p-6 shadow-card">
             <h2 className="font-display text-lg font-bold text-ink-900">Delete tour?</h2>
             <p className="mt-2 text-sm text-ink-700">
-              &ldquo;{deleteTarget.name}&rdquo; will be permanently removed from the site.
+              “{deleteTarget.name}” will be permanently removed from the site.
             </p>
-            {deleteError && <p role="alert" className="mt-3 text-sm text-red-600">{deleteError}</p>}
             <div className="mt-6 flex justify-end gap-3">
               <button
                 onClick={() => setDeleteTarget(null)}

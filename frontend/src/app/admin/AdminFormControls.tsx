@@ -75,13 +75,14 @@ export function ImageUploader({ value, onChange, target, slug, fallbackLabel }: 
       <div className="flex items-center gap-4">
         <div className="relative h-24 w-32 shrink-0 overflow-hidden rounded-lg bg-sand-100">
           {value ? (
-            /^https?:\/\//i.test(value) ? (
-              <Image src={value} alt={fallbackLabel || "Preview"} fill className="object-cover" unoptimized />
-            ) : (
-              // Plain <img> so a fresh upload shows straight away.
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={value} alt={fallbackLabel || "Preview"} className="h-full w-full object-cover" />
-            )
+            <Image
+              src={value}
+              alt={fallbackLabel || "Preview"}
+              fill
+              sizes="128px"
+              quality={75}
+              className="object-cover"
+            />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-xs text-ink-700/60">
               No photo yet
