@@ -15,19 +15,6 @@ const nextConfig = {
   turbopack: {
     root: workspaceRoot,
   },
-  async headers() {
-    return [
-      {
-        source: "/images/admin-tours/:path*",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "public, max-age=86400, s-maxage=31536000",
-          },
-        ],
-      },
-    ];
-  },
   async rewrites() {
     return [
       {
@@ -37,8 +24,6 @@ const nextConfig = {
     ];
   },
   images: {
-    qualities: [60, 75],
-    minimumCacheTTL: 86400,
     remotePatterns: [
       {
         protocol: "https",

@@ -3,13 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import {
-  LogOut,
-  LayoutDashboard,
-  CarFront,
-  MapPinned,
-  ExternalLink,
-} from "lucide-react";
+import { LogOut, LayoutDashboard, CarFront, MapPinned, ExternalLink } from "lucide-react";
 
 const links = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -36,23 +30,16 @@ export default function AdminNav() {
     <header className="border-b border-ink-900/10 bg-white">
       <div className="container-page flex flex-wrap items-center justify-between gap-4 py-4">
         <div className="flex items-center gap-6">
-          <Link
-            prefetch={false}
-            href="/admin"
-            className="font-display text-lg font-bold text-ocean-700"
-          >
+          <Link href="/admin" className="font-display text-lg font-bold text-ocean-700">
             Methmi Admin
           </Link>
           <nav className="flex items-center gap-1">
             {links.map((link) => {
               const active =
-                link.href === "/admin"
-                  ? pathname === "/admin"
-                  : pathname.startsWith(link.href);
+                link.href === "/admin" ? pathname === "/admin" : pathname.startsWith(link.href);
               const Icon = link.icon;
               return (
                 <Link
-                  prefetch={false}
                   key={link.href}
                   href={link.href}
                   className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold transition-colors ${
@@ -70,13 +57,11 @@ export default function AdminNav() {
         </div>
         <div className="flex items-center gap-3">
           <Link
-            prefetch={false}
             href="/"
             target="_blank"
             className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink-700 hover:text-ocean-700"
           >
-            View site{" "}
-            <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+            View site <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
           </Link>
           <button
             type="button"

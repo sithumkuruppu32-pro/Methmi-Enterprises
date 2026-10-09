@@ -1,11 +1,13 @@
 import "server-only";
-import { cache } from "react";
 
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { ADMIN_SESSION_COOKIE, isSessionTokenValid } from "@/lib/admin-auth";
+import {
+  ADMIN_SESSION_COOKIE,
+  isSessionTokenValid,
+} from "@/lib/admin-auth";
 
 import type { Tour } from "@/types/tour";
 
@@ -37,59 +39,55 @@ function getSupabaseAdminClient() {
       autoRefreshToken: false,
     },
     global: {
-      fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }),
+      fetch: (input, init) =>
+        fetch(input, { ...init, cache: "no-store" }),
     },
   });
 }
 
 // Check both the signed session and current admin membership on every request.
-export const requireAuthorizedAdmin = cache(
-  async function requireAuthorizedAdmin() {
-    const cookieStore = await cookies();
-    const token = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
+export async function requireAuthorizedAdmin() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
 
-    if (!token || !(await isSessionTokenValid(token))) {
-      redirect("/admin/login");
-    }
+  if (!token || !(await isSessionTokenValid(token))) {
+    redirect("/admin/login");
+  }
 
-    const supabase = getSupabaseAdminClient();
-    // isSessionTokenValid verifies the expires.userId.signature cookie format.
-    const userId = token.split(".")[1];
-    const { data: userData, error: userError } =
-      await supabase.auth.admin.getUserById(userId);
+  const supabase = getSupabaseAdminClient();
+  // isSessionTokenValid verifies the expires.userId.signature cookie format.
+  const userId = token.split(".")[1];
+  const { data: userData, error: userError } =
+    await supabase.auth.admin.getUserById(userId);
 
-    if (userError || !userData.user?.email) {
-      redirect("/admin/login");
-    }
+  if (userError || !userData.user?.email) {
+    redirect("/admin/login");
+  }
 
-    const { data: admin, error: adminError } = await supabase
-      .from("admins")
-      .select("email")
-      .eq("email", userData.user.email.trim().toLowerCase())
-      .maybeSingle();
+  const { data: admin, error: adminError } = await supabase
+    .from("admins")
+    .select("email")
+    .eq("email", userData.user.email.trim().toLowerCase())
+    .maybeSingle();
 
-    if (adminError) {
-      console.error("Admin membership check failed:", adminError.code);
-      throw new Error("Unable to verify admin access. Please try again.");
-    }
+  if (adminError) {
+    console.error("Admin membership check failed:", adminError.code);
+    throw new Error("Unable to verify admin access. Please try again.");
+  }
 
-    if (!admin) {
-      redirect("/admin/login");
-    }
+  if (!admin) {
+    redirect("/admin/login");
+  }
 
-    return supabase;
-  },
-);
+  return supabase;
+}
 
 // Read tours directly from Supabase on the server.
 export async function getAdminToursPage(page: number) {
-  // Keep authorization fresh on every request. Public tour rows can be read
-  // concurrently, but nothing is returned until the administrator is verified.
-  const authorization = requireAuthorizedAdmin();
-  const supabase = getSupabaseAdminClient();
+  const supabase = await requireAuthorizedAdmin();
   const offset = (page - 1) * ADMIN_TOURS_PAGE_SIZE;
 
-  const query = supabase
+  const { data, count, error } = await supabase
     .from("tours")
     .select(
       `slug,
@@ -101,13 +99,11 @@ export async function getAdminToursPage(page: number) {
        included,
        starting_price,
        image`,
-      { count: "exact" },
+      { count: "exact" }
     )
     .order("sort_order", { ascending: true })
     .order("slug", { ascending: true })
     .range(offset, offset + ADMIN_TOURS_PAGE_SIZE - 1);
-
-  const [, { data, count, error }] = await Promise.all([authorization, query]);
 
   if (error) {
     console.error("Admin tours query failed:", error.code);

@@ -22,7 +22,6 @@ const links = [
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-  const prefetch = pathname.startsWith("/admin") ? false : undefined;
 
   return (
     <header className="sticky top-0 z-40 border-b border-ocean-100 bg-white/95 backdrop-blur">
@@ -31,7 +30,6 @@ export default function Navbar() {
         aria-label="Main navigation"
       >
         <Link
-          prefetch={prefetch}
           href="/"
           className="flex items-center gap-2 font-display text-lg font-bold text-ocean-700 sm:text-xl"
           onClick={() => setOpen(false)}
@@ -43,7 +41,7 @@ export default function Navbar() {
               fill
               sizes="48px"
               className="object-contain"
-              loading="eager"
+              priority
             />
           </span>
           {siteConfig.businessName}
@@ -56,11 +54,10 @@ export default function Navbar() {
             return (
               <li key={link.href}>
                 <Link
-                  prefetch={prefetch}
                   href={link.href}
                   className={cn(
                     "text-sm font-semibold text-ink-800 transition-colors hover:text-ocean-600",
-                    active && "text-ocean-700",
+                    active && "text-ocean-700"
                   )}
                   aria-current={active ? "page" : undefined}
                 >
@@ -95,14 +92,13 @@ export default function Navbar() {
       <div
         className={cn(
           "overflow-hidden transition-[max-height] duration-300 ease-in-out lg:hidden",
-          open ? "max-h-96" : "max-h-0",
+          open ? "max-h-96" : "max-h-0"
         )}
       >
         <ul className="container-page flex flex-col gap-1 pb-5">
           {links.map((link) => (
             <li key={link.href}>
               <Link
-                prefetch={prefetch}
                 href={link.href}
                 onClick={() => setOpen(false)}
                 className="block rounded-lg px-3 py-2.5 text-base font-medium text-ink-800 hover:bg-sand-100"
